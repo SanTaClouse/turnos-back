@@ -39,6 +39,28 @@ export class CreateAppointmentDto {
   client_name?: string;
 
   @ApiProperty({
+    example: 'juan@example.com',
+    description:
+      'Email del cliente (opcional). Si lo provee, recibe confirmación y puede usar Mi Turno con OTP.',
+    required: false,
+  })
+  client_email?: string;
+
+  @ApiProperty({
+    example: 'Sin gel, por favor',
+    description: 'Notas o aclaraciones del cliente',
+    required: false,
+  })
+  notes?: string;
+
+  @ApiProperty({
+    example: 'web',
+    description: 'Origen del turno: whatsapp, web o manual',
+    required: false,
+  })
+  source?: string;
+
+  @ApiProperty({
     example: '770e8400-e29b-41d4-a716-446655440000',
     description:
       'ID del recurso preferido (opcional, se auto-asigna si no se especifica)',

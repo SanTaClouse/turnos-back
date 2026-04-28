@@ -8,6 +8,8 @@ import { ClientsModule } from './clients/clients.module';
 import { BlockedSlotsModule } from './blocked-slots/blocked-slots.module';
 import { ServicesModule } from './services/services.module';
 import { ResourcesModule } from './resources/resources.module';
+import { AuthModule } from './auth/auth.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { ResourcesModule } from './resources/resources.module';
     BlockedSlotsModule,
     ServicesModule,
     ResourcesModule,
+    MailModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

@@ -16,17 +16,27 @@ export class ClientsService {
   /**
    * Find client by phone (platform-level) or create a new one.
    * Always ensures the client is linked to the given tenant.
+   * If `email` is provided and the client doesn't have one yet, it's saved.
    */
-  async findOrCreate(tenantId: string, phone: string, name: string) {
+  async findOrCreate(
+    tenantId: string,
+    phone: string,
+    name: string,
+    email?: string,
+  ) {
     let client = await this.repo.findOne({
       where: { phone },
       relations: ['tenants'],
     });
 
     if (!client) {
-      client = this.repo.create({ phone, name });
+      client = this.repo.create({ phone, name, email: email ?? undefined });
       client.tenants = [];
       client = await this.repo.save(client);
+    } else if (email && !client.email) {
+      // Backfill email si no lo tenía
+      client.email = email;
+      await this.repo.save(client);
     }
 
     // Ensure client is linked to this tenant
@@ -42,6 +52,13 @@ export class ClientsService {
     }
 
     return client;
+  }
+
+  async findByEmail(email: string) {
+    return this.repo.findOne({
+      where: { email: email.trim().toLowerCase() },
+      relations: ['tenants'],
+    });
   }
 
   async findById(id: string) {

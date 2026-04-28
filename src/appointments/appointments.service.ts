@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Appointment } from './appointment.entity';
 import { AvailabilityService } from '../availability/availability.service';
 import { ClientsService } from '../clients/clients.service';
 import { ResourcesService } from '../resources/resources.service';
 import { ServicesService } from '../services/services.service';
+import { TenantsService } from '../tenants/tenants.service';
+import { MailService } from '../mail/mail.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 
 @Injectable()
@@ -22,6 +25,9 @@ export class AppointmentsService {
     private clientsService: ClientsService,
     private resourcesService: ResourcesService,
     private servicesService: ServicesService,
+    private tenantsService: TenantsService,
+    private mailService: MailService,
+    private configService: ConfigService,
   ) {}
 
   /**
@@ -132,17 +138,19 @@ export class AppointmentsService {
       assignedResourceId = matchingSlot.resource_ids[0];
     }
 
-    // 5. Find or create client
+    // 5. Find or create client (con email opcional)
     const client = await this.clientsService.findOrCreate(
       dto.tenant_id,
       dto.client_phone,
       dto.client_name || 'Unknown',
+      dto.client_email?.trim().toLowerCase(),
     );
 
     // 6. Calculate end_time and create appointment
     const startMin = this.timeToMinutes(dto.time);
     const endTime = this.minutesToTime(startMin + totalDuration);
 
+    let saved: Appointment;
     try {
       const appointment = this.appointmentsRepo.create({
         tenant_id: dto.tenant_id,
@@ -152,14 +160,58 @@ export class AppointmentsService {
         date: dto.date,
         time: dto.time,
         end_time: endTime,
+        notes: dto.notes ?? undefined,
+        source: dto.source ?? 'web',
         status: 'pending',
       });
 
-      return await this.appointmentsRepo.save(appointment);
+      saved = await this.appointmentsRepo.save(appointment);
     } catch {
       throw new ConflictException(
         'Could not create appointment — the slot may have been taken',
       );
+    }
+
+    // 7. Confirmación por email (best-effort, no bloquea)
+    const emailToNotify = dto.client_email?.trim() || client.email;
+    if (emailToNotify) {
+      void this.sendConfirmationEmail(
+        saved,
+        emailToNotify,
+        client.name,
+        service.name,
+        dto.tenant_id,
+      );
+    }
+
+    return saved;
+  }
+
+  private async sendConfirmationEmail(
+    appt: Appointment,
+    email: string,
+    clientName: string,
+    serviceName: string,
+    tenantId: string,
+  ) {
+    try {
+      const tenant = await this.tenantsService.findById(tenantId);
+      if (!tenant) return;
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ??
+        'http://localhost:3001';
+      const manageUrl = `${frontendUrl}/${tenant.slug}/mi-turno`;
+      await this.mailService.sendAppointmentConfirmation({
+        to: email,
+        clientName,
+        businessName: tenant.name,
+        serviceName,
+        date: appt.date,
+        time: appt.time,
+        manageUrl,
+      });
+    } catch {
+      // best-effort, no rompemos la creación del turno
     }
   }
 
@@ -167,6 +219,7 @@ export class AppointmentsService {
     tenantId: string,
     filters?: {
       clientPhone?: string;
+      clientEmail?: string;
       date?: string;
       startDate?: string;
       endDate?: string;
@@ -184,6 +237,12 @@ export class AppointmentsService {
     if (filters?.clientPhone) {
       qb.andWhere('client.phone = :clientPhone', {
         clientPhone: filters.clientPhone,
+      });
+    }
+
+    if (filters?.clientEmail) {
+      qb.andWhere('LOWER(client.email) = :clientEmail', {
+        clientEmail: filters.clientEmail.trim().toLowerCase(),
       });
     }
 

@@ -52,6 +52,7 @@ export class AppointmentsController {
   findAll(
     @Query('tenantId') tenantId: string,
     @Query('clientPhone') clientPhone?: string,
+    @Query('clientEmail') clientEmail?: string,
     @Query('date') date?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -60,6 +61,7 @@ export class AppointmentsController {
   ) {
     return this.service.findAll(tenantId, {
       clientPhone,
+      clientEmail,
       date,
       startDate,
       endDate,
