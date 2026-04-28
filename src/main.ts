@@ -5,8 +5,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // CORS: lista en CORS_ORIGINS separada por comas + localhost dev por default.
+  // Ej: CORS_ORIGINS=https://turnosapp.vercel.app,https://turnosapp.com
+  const corsEnv = process.env.CORS_ORIGINS;
+  const defaultOrigins = ['http://localhost:3001', 'http://localhost:3002'];
+  const origin = corsEnv
+    ? corsEnv.split(',').map((s) => s.trim()).filter(Boolean)
+    : defaultOrigins;
+
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3002'],
+    origin,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -39,12 +47,11 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(
-    `✅ API ejecutando en http://localhost:${process.env.PORT ?? 3000}`,
-  );
-  console.log(
-    `📚 Documentación Swagger en http://localhost:${process.env.PORT ?? 3000}/api/docs`,
-  );
+  const port = parseInt(process.env.PORT ?? '3000', 10);
+  // 0.0.0.0 es importante para que la mayoría de los providers (Render, Railway,
+  // Heroku, Fly) puedan rutear tráfico al contenedor.
+  await app.listen(port, '0.0.0.0');
+  console.log(`✅ API listening on port ${port}`);
+  console.log(`📚 Swagger en /api/docs`);
 }
 bootstrap();
