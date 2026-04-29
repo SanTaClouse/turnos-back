@@ -44,7 +44,7 @@ export class Appointment {
   @Column({ type: 'varchar', nullable: true })
   verification_token: string; // JWT token for email verification link
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   token_expires_at: Date; // Token expiration time (7 days)
 
   @CreateDateColumn()
