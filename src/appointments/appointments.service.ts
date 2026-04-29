@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Appointment } from './appointment.entity';
 import { AvailabilityService } from '../availability/availability.service';
 import { ClientsService } from '../clients/clients.service';
@@ -28,6 +29,7 @@ export class AppointmentsService {
     private tenantsService: TenantsService,
     private mailService: MailService,
     private configService: ConfigService,
+    private jwtService: JwtService,
   ) {}
 
   /**
@@ -166,6 +168,12 @@ export class AppointmentsService {
       });
 
       saved = await this.appointmentsRepo.save(appointment);
+
+      // Generate verification token (7 days expiry)
+      const token = this.generateVerificationToken(saved.id);
+      saved.verification_token = token;
+      saved.token_expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      saved = await this.appointmentsRepo.save(saved);
     } catch {
       throw new ConflictException(
         'Could not create appointment — the slot may have been taken',
@@ -200,7 +208,12 @@ export class AppointmentsService {
       const frontendUrl =
         this.configService.get<string>('FRONTEND_URL') ??
         'http://localhost:3001';
-      const manageUrl = `${frontendUrl}/${tenant.slug}/mi-turno`;
+
+      // Include verification token in URL for auto-verification
+      const manageUrl = appt.verification_token
+        ? `${frontendUrl}/${tenant.slug}/mi-turno?token=${appt.verification_token}`
+        : `${frontendUrl}/${tenant.slug}/mi-turno`;
+
       await this.mailService.sendAppointmentConfirmation({
         to: email,
         clientName,
@@ -317,5 +330,56 @@ export class AppointmentsService {
 
     appointment.status = 'cancelled';
     return this.appointmentsRepo.save(appointment);
+  }
+
+  /**
+   * Verify and confirm appointment using verification token from email
+   */
+  async verifyByToken(id: string, token: string) {
+    const appointment = await this.findById(id);
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    // Check if token exists
+    if (!appointment.verification_token) {
+      throw new BadRequestException('No verification token for this appointment');
+    }
+
+    // Check if token has expired
+    if (appointment.token_expires_at && new Date() > appointment.token_expires_at) {
+      throw new BadRequestException('Verification token has expired');
+    }
+
+    // Verify token
+    try {
+      const decoded = this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+      });
+
+      // Validate token matches the appointment
+      if (decoded.appointmentId !== id) {
+        throw new BadRequestException('Invalid verification token');
+      }
+    } catch {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    // Token is valid, confirm the appointment
+    appointment.status = 'confirmed';
+    return this.appointmentsRepo.save(appointment);
+  }
+
+  /**
+   * Generate verification token for appointment (used in emails)
+   */
+  generateVerificationToken(appointmentId: string): string {
+    return this.jwtService.sign(
+      { appointmentId },
+      {
+        secret: this.configService.get<string>('JWT_SECRET') || 'your-secret-key',
+        expiresIn: '7d',
+      },
+    );
   }
 }

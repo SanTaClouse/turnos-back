@@ -101,6 +101,20 @@ export class AppointmentsController {
     return this.service.cancel(id);
   }
 
+  @Post(':id/verify-by-token')
+  @ApiOperation({
+    summary: 'Verificar turno por token',
+    description: 'Verifica un turno usando el token enviado por email',
+  })
+  @ApiOkResponse({ description: 'Turno verificado' })
+  @ApiBadRequestResponse({ description: 'Token inválido o expirado' })
+  verifyByToken(
+    @Param('id') id: string,
+    @Body('token') token: string,
+  ) {
+    return this.service.verifyByToken(id, token);
+  }
+
   @Post('webhook')
   @ApiOperation({
     summary: 'Webhook de WhatsApp',

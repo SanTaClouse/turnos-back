@@ -12,7 +12,7 @@ export class MailService {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
     this.from =
       this.configService.get<string>('EMAIL_FROM') ??
-      'TurnosApp <onboarding@resend.dev>';
+      'TurnosApp <turnos@turno1min.app>';
 
     if (apiKey) {
       this.resend = new Resend(apiKey);

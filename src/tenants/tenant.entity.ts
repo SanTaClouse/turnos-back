@@ -37,6 +37,9 @@ export class Tenant {
   @Column({ default: 'es-AR' })
   locale: string;
 
+  @Column({ default: '+54', nullable: true })
+  country_code: string;
+
   @Column({ type: 'text', nullable: true })
   description: string;
 

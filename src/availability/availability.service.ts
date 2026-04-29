@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Availability } from './availability.entity';
 import { Appointment } from '../appointments/appointment.entity';
 import { BlockedSlot } from '../blocked-slots/blocked-slot.entity';
+import { Tenant } from '../tenants/tenant.entity';
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class AvailabilityService {
     private appointmentsRepo: Repository<Appointment>,
     @InjectRepository(BlockedSlot)
     private blockedSlotsRepo: Repository<BlockedSlot>,
+    @InjectRepository(Tenant)
+    private tenantsRepo: Repository<Tenant>,
   ) {}
 
   async create(dto: CreateAvailabilityDto) {
@@ -232,6 +235,8 @@ export class AvailabilityService {
    *
    * Returns: { slot: "10:00", resources: ["resource-id-1", "resource-id-2"] }[]
    * The consumer can then pick the first available resource or let the user choose.
+   *
+   * Filters out past slots if the date is today.
    */
   async getAvailableSlotsForService(
     tenantId: string,
@@ -248,6 +253,15 @@ export class AvailabilityService {
     const blockedSlots = await this.blockedSlotsRepo.find({
       where: { tenant_id: tenantId },
     });
+
+    // Get tenant to access timezone
+    const tenant = await this.tenantsRepo.findOne({
+      where: { id: tenantId },
+    });
+
+    if (!tenant) {
+      throw new BadRequestException('Tenant not found');
+    }
 
     // For each resource, get available slots
     const slotMap = new Map<string, string[]>();
@@ -270,10 +284,56 @@ export class AvailabilityService {
       }
     }
 
-    // Convert map to sorted array
-    return Array.from(slotMap.entries())
+    // Convert map to sorted array and filter out past slots if today
+    let result = Array.from(slotMap.entries())
       .map(([slot, resource_ids]) => ({ slot, resource_ids }))
       .sort((a, b) => a.slot.localeCompare(b.slot));
+
+    // Filter past slots if the requested date is today
+    result = this.filterPastSlots(date, result, tenant.timezone);
+
+    return result;
+  }
+
+  /**
+   * Filter out slots that have already passed based on current time in tenant's timezone
+   */
+  private filterPastSlots(
+    date: string,
+    slots: { slot: string; resource_ids: string[] }[],
+    timezone: string,
+  ): { slot: string; resource_ids: string[] }[] {
+    // Get today's date in the tenant's timezone
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: timezone,
+    });
+
+    const parts = formatter.formatToParts(now);
+    const dateMap = new Map(parts.map((p) => [p.type, p.value]));
+    const today = `${dateMap.get('year')}-${dateMap.get('month')}-${dateMap.get('day')}`;
+    const currentHour = parseInt(dateMap.get('hour') || '0', 10);
+    const currentMinute = parseInt(dateMap.get('minute') || '0', 10);
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // If the requested date is not today, return all slots
+    if (date !== today) {
+      return slots;
+    }
+
+    // Filter out slots that have already passed
+    return slots.filter((item) => {
+      const [slotHour, slotMinute] = item.slot.split(':').map(Number);
+      const slotTimeInMinutes = slotHour * 60 + slotMinute;
+      return slotTimeInMinutes > currentTimeInMinutes;
+    });
   }
 
   /**

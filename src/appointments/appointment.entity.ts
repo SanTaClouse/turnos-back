@@ -41,6 +41,12 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   notes: string; // free-text notes from client or business
 
+  @Column({ type: 'varchar', nullable: true })
+  verification_token: string; // JWT token for email verification link
+
+  @Column({ type: 'datetime', nullable: true })
+  token_expires_at: Date; // Token expiration time (7 days)
+
   @CreateDateColumn()
   created_at: Date;
 

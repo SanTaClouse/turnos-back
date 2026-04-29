@@ -41,6 +41,13 @@ export class CreateTenantDto {
   locale?: string;
 
   @ApiProperty({
+    example: '+54',
+    description: 'Código de país para teléfono (ej: +54 para Argentina, +52 para México)',
+    required: false,
+  })
+  country_code?: string;
+
+  @ApiProperty({
     example: 'Barbería tradicional con más de 20 años en el barrio.',
     description: 'Descripción del negocio para la landing pública',
     required: false,
