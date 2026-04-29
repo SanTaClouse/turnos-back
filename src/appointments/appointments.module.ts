@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Appointment } from './appointment.entity';
 import { AppointmentsController } from './appointments.controller';
@@ -14,6 +15,10 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Appointment]),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'your-secret-key',
+      signOptions: { expiresIn: '7d' },
+    }),
     AvailabilityModule,
     ClientsModule,
     ResourcesModule,
