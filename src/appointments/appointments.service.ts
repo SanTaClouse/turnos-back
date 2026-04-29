@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Appointment } from './appointment.entity';
 import { AvailabilityService } from '../availability/availability.service';
 import { ClientsService } from '../clients/clients.service';
@@ -30,6 +31,7 @@ export class AppointmentsService {
     private mailService: MailService,
     private configService: ConfigService,
     private jwtService: JwtService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -192,6 +194,22 @@ export class AppointmentsService {
       );
     }
 
+    // 8. Emitir evento - los listeners se encargan del resto
+    // DESACOPLADO: AppointmentsService no conoce de notificaciones
+    void (async () => {
+      try {
+        const tenant = await this.tenantsService.findById(dto.tenant_id);
+        if (tenant) {
+          this.eventEmitter.emit('appointment.created', {
+            appointment: saved,
+            tenant,
+          });
+        }
+      } catch (error) {
+        console.error('Error emitting appointment.created event:', error);
+      }
+    })();
+
     return saved;
   }
 
@@ -211,7 +229,7 @@ export class AppointmentsService {
 
       // Include verification token in URL for auto-verification
       const manageUrl = appt.verification_token
-        ? `${frontendUrl}/${tenant.slug}/mi-turno?token=${appt.verification_token}`
+        ? `${frontendUrl}/${tenant.slug}/mi-turno?appointmentId=${appt.id}&token=${appt.verification_token}`
         : `${frontendUrl}/${tenant.slug}/mi-turno`;
 
       await this.mailService.sendAppointmentConfirmation({
@@ -319,7 +337,24 @@ export class AppointmentsService {
     }
 
     appointment.status = 'confirmed';
-    return this.appointmentsRepo.save(appointment);
+    const saved = await this.appointmentsRepo.save(appointment);
+
+    // Emitir evento
+    void (async () => {
+      try {
+        const tenant = await this.tenantsService.findById(appointment.tenant_id);
+        if (tenant) {
+          this.eventEmitter.emit('appointment.confirmed', {
+            appointment: saved,
+            tenant,
+          });
+        }
+      } catch (error) {
+        console.error('Error emitting appointment.confirmed event:', error);
+      }
+    })();
+
+    return saved;
   }
 
   async cancel(id: string) {
@@ -329,7 +364,24 @@ export class AppointmentsService {
     }
 
     appointment.status = 'cancelled';
-    return this.appointmentsRepo.save(appointment);
+    const saved = await this.appointmentsRepo.save(appointment);
+
+    // Emitir evento
+    void (async () => {
+      try {
+        const tenant = await this.tenantsService.findById(appointment.tenant_id);
+        if (tenant) {
+          this.eventEmitter.emit('appointment.cancelled', {
+            appointment: saved,
+            tenant,
+          });
+        }
+      } catch (error) {
+        console.error('Error emitting appointment.cancelled event:', error);
+      }
+    })();
+
+    return saved;
   }
 
   /**

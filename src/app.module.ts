@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { AvailabilityModule } from './availability/availability.module';
@@ -10,6 +11,7 @@ import { ServicesModule } from './services/services.module';
 import { ResourcesModule } from './resources/resources.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +19,7 @@ import { MailModule } from './mail/mail.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -64,6 +67,7 @@ import { MailModule } from './mail/mail.module';
     ResourcesModule,
     MailModule,
     AuthModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -11,6 +11,7 @@ import { ServicesModule } from '../services/services.module';
 import { TenantsModule } from '../tenants/tenants.module';
 import { MailModule } from '../mail/mail.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     TenantsModule,
     MailModule,
     WhatsappModule,
+    NotificationsModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
