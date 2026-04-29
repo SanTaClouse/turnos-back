@@ -183,7 +183,8 @@ export class AppointmentsService {
     }
 
     // 7. Confirmación por email (best-effort, no bloquea)
-    const emailToNotify = dto.client_email?.trim() || client.email;
+    // Solo enviar si fue explícitamente proporcionado en esta reserva
+    const emailToNotify = dto.client_email?.trim();
     if (emailToNotify) {
       void this.sendConfirmationEmail(
         saved,

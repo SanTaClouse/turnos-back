@@ -130,7 +130,7 @@ function otpTemplate(code: string): string {
 <html>
   <body style="font-family: -apple-system, system-ui, sans-serif; background: #fafaf7; padding: 40px 20px; margin: 0;">
     <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #ebeae3; border-radius: 14px; padding: 32px;">
-      <div style="font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #0f0f0e; letter-spacing: -1px; margin-bottom: 24px;">TurnosApp</div>
+      <div style="font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #0f0f0e; letter-spacing: -1px; margin-bottom: 24px;">Turno1Min</div>
       <h1 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; color: #0f0f0e; letter-spacing: -0.5px; line-height: 1.1; margin: 0 0 12px;">Tu código de verificación</h1>
       <p style="color: #52514d; font-size: 14px; line-height: 1.5; margin: 0 0 28px;">Ingresá este código en la pantalla para acceder a tus turnos. Vence en 10 minutos.</p>
       <div style="background: #f3f2ec; border-radius: 10px; padding: 20px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: 8px; color: #0f0f0e;">${code}</div>
@@ -153,7 +153,7 @@ function appointmentTemplate(opts: {
 <html>
   <body style="font-family: -apple-system, system-ui, sans-serif; background: #fafaf7; padding: 40px 20px; margin: 0;">
     <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #ebeae3; border-radius: 14px; padding: 32px;">
-      <div style="font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #0f0f0e; letter-spacing: -1px; margin-bottom: 24px;">TurnosApp</div>
+      <div style="font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 32px; color: #0f0f0e; letter-spacing: -1px; margin-bottom: 24px;">Turno1Min</div>
       <h1 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; color: #0f0f0e; letter-spacing: -0.5px; line-height: 1.15; margin: 0 0 12px;">¡Hola ${opts.clientName}!<br>Tu turno está confirmado.</h1>
       <p style="color: #52514d; font-size: 14px; line-height: 1.5; margin: 0 0 24px;">Te esperamos en <strong>${opts.businessName}</strong>.</p>
       <div style="background: #f3f2ec; border-radius: 10px; padding: 18px; margin-bottom: 24px;">

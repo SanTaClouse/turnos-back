@@ -108,11 +108,12 @@ export class AppointmentsController {
   })
   @ApiOkResponse({ description: 'Turno verificado' })
   @ApiBadRequestResponse({ description: 'Token inválido o expirado' })
-  verifyByToken(
+  async verifyByToken(
     @Param('id') id: string,
     @Body('token') token: string,
   ) {
-    return this.service.verifyByToken(id, token);
+    await this.service.verifyByToken(id, token);
+    return { verified: true };
   }
 
   @Post('webhook')
