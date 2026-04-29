@@ -7,6 +7,8 @@ import { PushSubscription } from './push-subscription.entity';
 import { NotificationLog } from './notification-log.entity';
 import { Appointment } from '../appointments/appointment.entity';
 import { Tenant } from '../tenants/tenant.entity';
+import { Client } from '../clients/client.entity';
+import { MailService } from '../mail/mail.service';
 
 export interface NotificationPayload {
   type: string; // 'appointment.created', 'appointment.reminder.24h', etc.
@@ -25,6 +27,13 @@ export class NotificationsService {
     private pushSubscriptionsRepo: Repository<PushSubscription>,
     @InjectRepository(NotificationLog)
     private notificationLogRepo: Repository<NotificationLog>,
+    @InjectRepository(Appointment)
+    private appointmentsRepo: Repository<Appointment>,
+    @InjectRepository(Client)
+    private clientsRepo: Repository<Client>,
+    @InjectRepository(Tenant)
+    private tenantsRepo: Repository<Tenant>,
+    private mailService: MailService,
     private configService: ConfigService,
   ) {
     // Configurar web-push
@@ -87,15 +96,11 @@ export class NotificationsService {
         case 'push':
           return await this.sendPush(payload);
         case 'email':
-          // Próximo: integrar con MailService
-          console.log('EMAIL:', payload.title, payload.body);
-          break;
+          return await this.sendEmail(payload);
         case 'whatsapp':
-          // Próximo: integrar con WhatsappService
           console.log('WHATSAPP:', payload.title, payload.body);
           break;
         case 'sms':
-          // Próximo: integrar con SMS service
           console.log('SMS:', payload.title, payload.body);
           break;
       }
@@ -163,6 +168,60 @@ export class NotificationsService {
     );
 
     return Promise.all(promises);
+  }
+
+  /**
+   * Enviar notificación por email
+   * Busca el cliente por ID y envía el email
+   */
+  private async sendEmail(payload: NotificationPayload) {
+    if (!payload.clientId) {
+      return;
+    }
+
+    const client = await this.clientsRepo.findOne({
+      where: { id: payload.clientId },
+    });
+
+    if (!client || !client.email) {
+      return;
+    }
+
+    const tenant = await this.tenantsRepo.findOne({
+      where: { id: payload.tenantId },
+    });
+
+    // Construir email con formato según tipo de notificación
+    const subject = this.buildEmailSubject(payload.type, tenant?.name);
+    const text = payload.body;
+
+    await this.mailService.sendEmail({
+      to: client.email,
+      subject,
+      text,
+    });
+  }
+
+  /**
+   * Construir asunto del email según tipo de notificación
+   */
+  private buildEmailSubject(type: string, businessName?: string): string {
+    const defaultName = businessName || 'TurnosApp';
+    switch (type) {
+      case 'appointment.created':
+      case 'appointment.created.client':
+        return `Tu turno en ${defaultName} está confirmado`;
+      case 'appointment.confirmed':
+        return `Tu turno está confirmado`;
+      case 'appointment.cancelled':
+        return `Tu turno fue cancelado`;
+      case 'appointment.reminder.24h':
+        return `Recordatorio: Tu turno es mañana`;
+      case 'appointment.reminder.2h':
+        return `⏰ Tu turno en 2 horas`;
+      default:
+        return `Notificación de ${defaultName}`;
+    }
   }
 
   /**

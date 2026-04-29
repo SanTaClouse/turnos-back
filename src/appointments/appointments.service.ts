@@ -198,10 +198,12 @@ export class AppointmentsService {
     // DESACOPLADO: AppointmentsService no conoce de notificaciones
     void (async () => {
       try {
+        // Load full appointment with relations for listeners
+        const appointmentWithRelations = await this.findById(saved.id);
         const tenant = await this.tenantsService.findById(dto.tenant_id);
-        if (tenant) {
+        if (tenant && appointmentWithRelations) {
           this.eventEmitter.emit('appointment.created', {
-            appointment: saved,
+            appointment: appointmentWithRelations,
             tenant,
           });
         }
@@ -342,10 +344,11 @@ export class AppointmentsService {
     // Emitir evento
     void (async () => {
       try {
+        const appointmentWithRelations = await this.findById(saved.id);
         const tenant = await this.tenantsService.findById(appointment.tenant_id);
-        if (tenant) {
+        if (tenant && appointmentWithRelations) {
           this.eventEmitter.emit('appointment.confirmed', {
-            appointment: saved,
+            appointment: appointmentWithRelations,
             tenant,
           });
         }
@@ -369,10 +372,11 @@ export class AppointmentsService {
     // Emitir evento
     void (async () => {
       try {
+        const appointmentWithRelations = await this.findById(saved.id);
         const tenant = await this.tenantsService.findById(appointment.tenant_id);
-        if (tenant) {
+        if (tenant && appointmentWithRelations) {
           this.eventEmitter.emit('appointment.cancelled', {
-            appointment: saved,
+            appointment: appointmentWithRelations,
             tenant,
           });
         }

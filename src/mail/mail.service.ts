@@ -55,6 +55,38 @@ export class MailService {
   }
 
   /**
+   * Envía un email genérico (usado por el sistema de notificaciones)
+   */
+  async sendEmail(opts: {
+    to: string;
+    subject: string;
+    text: string;
+    html?: string;
+  }): Promise<void> {
+    if (!this.resend) {
+      this.logger.log(`[MOCK EMAIL] To: ${opts.to} · Subject: ${opts.subject}`);
+      return;
+    }
+
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.from,
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+      });
+      if (error) {
+        this.logger.error(`Resend error: ${JSON.stringify(error)}`);
+        throw new Error(error.message ?? 'Email failed');
+      }
+    } catch (err) {
+      this.logger.error('Failed to send email', err);
+      throw err;
+    }
+  }
+
+  /**
    * Envía la confirmación del turno por email con link de gestión.
    */
   async sendAppointmentConfirmation(opts: {
