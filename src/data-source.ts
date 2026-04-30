@@ -10,8 +10,8 @@ const ssl = sslEnabled ? { rejectUnauthorized: false } : false;
 
 const baseConfig: DataSourceOptions = {
   type: 'postgres',
-  entities: ['src/**/*.entity.ts'],
-  migrations: ['src/migrations/*.ts'],
+  entities: ['dist/**/*.entity.js'],
+  migrations: ['dist/migrations/*.js'],
   synchronize: !isProd,
   ssl,
 };

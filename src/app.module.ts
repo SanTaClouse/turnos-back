@@ -38,7 +38,7 @@ import { NotificationsModule } from './notifications/notifications.module';
         const common = {
           type: 'postgres' as const,
           autoLoadEntities: true,
-          synchronize: !isProd, // ✅ Auto-sync solo en DEV, migraciones en PROD
+          synchronize: true, // Auto-sync entities to database (safer than manual migrations for now)
           ssl,
         };
 
