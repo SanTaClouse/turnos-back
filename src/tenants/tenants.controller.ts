@@ -6,6 +6,8 @@ import {
   Delete,
   Body,
   Param,
+  Req,
+  Headers,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,24 +18,58 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { NotFoundException } from '@nestjs/common';
+import type { Request } from 'express';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { Tenant } from './tenant.entity';
+import { AdminAuthService } from '../auth/admin-auth.service';
+
+function getClientIp(req: Request): string | null {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string') return fwd.split(',')[0].trim();
+  if (Array.isArray(fwd) && fwd.length > 0) return fwd[0];
+  return req.ip ?? null;
+}
 
 @ApiTags('Tenants')
 @Controller('tenants')
 export class TenantsController {
-  constructor(private readonly service: TenantsService) {}
+  constructor(
+    private readonly service: TenantsService,
+    private readonly adminAuth: AdminAuthService,
+  ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva empresa' })
+  @ApiOperation({
+    summary: 'Crear una nueva empresa',
+    description:
+      'Crea el tenant. Si se envía un email, también crea una session ' +
+      'inicial para el dispositivo que hace la request (el dueño está ' +
+      'completando el onboarding) y devuelve un session_token para guardar ' +
+      'en cookie httpOnly. En devices distintos, el dueño debe usar ' +
+      'POST /auth/admin/request-code + /auth/admin/verify.',
+  })
   @ApiCreatedResponse({
-    description: 'Empresa creada exitosamente',
-    type: Tenant,
+    description: 'Empresa creada (con session_token si se proveyó email)',
   })
   @ApiBadRequestResponse({ description: 'Datos inválidos' })
-  create(@Body() dto: CreateTenantDto) {
-    return this.service.create(dto);
+  async create(
+    @Body() dto: CreateTenantDto,
+    @Headers('user-agent') userAgent: string | undefined,
+    @Req() req: Request,
+  ) {
+    const tenant = await this.service.create(dto);
+
+    if (dto.email && tenant.email) {
+      const session = await this.adminAuth.createSession(
+        tenant,
+        userAgent ?? null,
+        getClientIp(req),
+      );
+      return { ...tenant, session_token: session.session_token };
+    }
+
+    return tenant;
   }
 
   @Get()

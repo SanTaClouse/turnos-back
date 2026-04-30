@@ -20,6 +20,14 @@ export class CreateTenantDto {
   whatsapp_number: string;
 
   @ApiProperty({
+    example: 'dueno@negocio.com',
+    description:
+      'Email del dueño/admin del negocio. Se usa para login OTP en otros dispositivos.',
+    required: false,
+  })
+  email?: string;
+
+  @ApiProperty({
     example: 'America/Argentina/Buenos_Aires',
     description: 'Zona horaria del negocio (IANA timezone)',
     required: false,
