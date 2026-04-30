@@ -1,9 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Run migrations in production
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const dataSource = app.get(DataSource);
+      console.log('🔄 Running migrations...');
+      await dataSource.runMigrations();
+      console.log('✅ Migrations completed');
+    } catch (error) {
+      console.error('❌ Migration failed:', error);
+      process.exit(1);
+    }
+  }
 
   // CORS: lista en CORS_ORIGINS separada por comas + localhost dev por default.
   // Ej: CORS_ORIGINS=https://turnosapp.vercel.app,https://turnosapp.com
