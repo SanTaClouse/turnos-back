@@ -28,7 +28,7 @@ export class Tenant {
   @Column()
   whatsapp_number: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   email: string | null;
 
   @Column({ default: 'America/Argentina/Buenos_Aires' })
