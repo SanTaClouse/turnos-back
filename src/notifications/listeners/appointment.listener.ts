@@ -20,17 +20,18 @@ export class AppointmentEventListener {
 
   /**
    * Cuando se crea un turno:
-   * 1. Notificar al admin por push (para que vea el nuevo turno)
-   * 2. Notificar al cliente por email (confirmación de reserva)
+   * - Notificar al admin por push (para que vea el nuevo turno).
+   * - NO mandar email al cliente: el email de confirmación se dispara
+   *   recién cuando el admin confirma el turno (appointment.confirmed).
+   *   Esto evita el "doble email" y le da al admin la decisión final.
    */
   @OnEvent('appointment.created')
   async onAppointmentCreated(data: {
     appointment: Appointment;
     tenant: Tenant;
   }) {
-    const { appointment, tenant } = data;
+    const { appointment, tenant: _tenant } = data;
 
-    // Notificar al admin (push para ver rápido)
     await this.notificationsService.notify({
       type: 'appointment.created',
       tenantId: appointment.tenant_id,
@@ -38,21 +39,8 @@ export class AppointmentEventListener {
       clientId: appointment.client_id,
       title: `Nuevo turno: ${appointment.client?.name || 'Cliente'}`,
       body: `${appointment.service?.name} - ${appointment.time}`,
-      channels: ['push'], // Admin necesita verlo rápido
+      channels: ['push'],
     });
-
-    // Notificar al cliente (email de confirmación)
-    if (appointment.client?.email) {
-      await this.notificationsService.notify({
-        type: 'appointment.created.client',
-        tenantId: appointment.tenant_id,
-        appointmentId: appointment.id,
-        clientId: appointment.client_id,
-        title: 'Tu turno fue confirmado',
-        body: `${appointment.service?.name} el ${appointment.date} a las ${appointment.time}`,
-        channels: ['email'], // Cliente confirma por email
-      });
-    }
   }
 
   /**

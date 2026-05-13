@@ -15,7 +15,6 @@ import { ClientsService } from '../clients/clients.service';
 import { ResourcesService } from '../resources/resources.service';
 import { ServicesService } from '../services/services.service';
 import { TenantsService } from '../tenants/tenants.service';
-import { MailService } from '../mail/mail.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 
 @Injectable()
@@ -28,7 +27,6 @@ export class AppointmentsService {
     private resourcesService: ResourcesService,
     private servicesService: ServicesService,
     private tenantsService: TenantsService,
-    private mailService: MailService,
     private configService: ConfigService,
     private jwtService: JwtService,
     private eventEmitter: EventEmitter2,
@@ -182,21 +180,10 @@ export class AppointmentsService {
       );
     }
 
-    // 7. Confirmación por email (best-effort, no bloquea)
-    // Solo enviar si fue explícitamente proporcionado en esta reserva
-    const emailToNotify = dto.client_email?.trim();
-    if (emailToNotify) {
-      void this.sendConfirmationEmail(
-        saved,
-        emailToNotify,
-        client.name,
-        service.name,
-        dto.tenant_id,
-      );
-    }
-
-    // 8. Emitir evento - los listeners se encargan del resto
-    // DESACOPLADO: AppointmentsService no conoce de notificaciones
+    // 7. Emitir evento - los listeners se encargan del resto
+    // DESACOPLADO: AppointmentsService no conoce de notificaciones.
+    // NOTA: NO se envía email al cliente acá. El email de confirmación se
+    // dispara solo cuando el admin confirma el turno (appointment.confirmed).
     void (async () => {
       try {
         // Load full appointment with relations for listeners
@@ -214,39 +201,6 @@ export class AppointmentsService {
     })();
 
     return saved;
-  }
-
-  private async sendConfirmationEmail(
-    appt: Appointment,
-    email: string,
-    clientName: string,
-    serviceName: string,
-    tenantId: string,
-  ) {
-    try {
-      const tenant = await this.tenantsService.findById(tenantId);
-      if (!tenant) return;
-      const frontendUrl =
-        this.configService.get<string>('FRONTEND_URL') ??
-        'http://localhost:3001';
-
-      // Include verification token in URL for auto-verification
-      const manageUrl = appt.verification_token
-        ? `${frontendUrl}/${tenant.slug}/mi-turno?appointmentId=${appt.id}&token=${appt.verification_token}`
-        : `${frontendUrl}/${tenant.slug}/mi-turno`;
-
-      await this.mailService.sendAppointmentConfirmation({
-        to: email,
-        clientName,
-        businessName: tenant.name,
-        serviceName,
-        date: appt.date,
-        time: appt.time,
-        manageUrl,
-      });
-    } catch {
-      // best-effort, no rompemos la creación del turno
-    }
   }
 
   async findAll(

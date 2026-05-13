@@ -136,8 +136,8 @@ export class NotificationsService {
     const pushPayload = JSON.stringify({
       title: payload.title,
       body: payload.body,
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
       tag: payload.appointmentId || payload.type,
       data: {
         appointmentId: payload.appointmentId,
@@ -171,34 +171,57 @@ export class NotificationsService {
   }
 
   /**
-   * Enviar notificación por email
-   * Busca el cliente por ID y envía el email
+   * Enviar notificación por email.
+   *
+   * Para `appointment.confirmed` usamos el template HTML lindo con link de
+   * gestión (sendAppointmentConfirmation). Para el resto de tipos
+   * (cancelled, reminders, etc) usamos el fallback de texto plano.
    */
   private async sendEmail(payload: NotificationPayload) {
-    if (!payload.clientId) {
-      return;
-    }
+    if (!payload.clientId) return;
 
     const client = await this.clientsRepo.findOne({
       where: { id: payload.clientId },
     });
-
-    if (!client || !client.email) {
-      return;
-    }
+    if (!client || !client.email) return;
 
     const tenant = await this.tenantsRepo.findOne({
       where: { id: payload.tenantId },
     });
+    if (!tenant) return;
 
-    // Construir email con formato según tipo de notificación
-    const subject = this.buildEmailSubject(payload.type, tenant?.name);
-    const text = payload.body;
+    if (payload.type === 'appointment.confirmed' && payload.appointmentId) {
+      const appointment = await this.appointmentsRepo.findOne({
+        where: { id: payload.appointmentId },
+        relations: ['service'],
+      });
+      if (!appointment) return;
 
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ??
+        'http://localhost:3001';
+      const manageUrl = appointment.verification_token
+        ? `${frontendUrl}/${tenant.slug}/mi-turno?appointmentId=${appointment.id}&token=${appointment.verification_token}`
+        : `${frontendUrl}/${tenant.slug}/mi-turno`;
+
+      await this.mailService.sendAppointmentConfirmation({
+        to: client.email,
+        clientName: client.name,
+        businessName: tenant.name,
+        serviceName: appointment.service?.name ?? 'Turno',
+        date: appointment.date,
+        time: appointment.time,
+        manageUrl,
+      });
+      return;
+    }
+
+    // Fallback genérico (cancelled, reminders, etc.)
+    const subject = this.buildEmailSubject(payload.type, tenant.name);
     await this.mailService.sendEmail({
       to: client.email,
       subject,
-      text,
+      text: payload.body,
     });
   }
 

@@ -9,7 +9,6 @@ import { ClientsModule } from '../clients/clients.module';
 import { ResourcesModule } from '../resources/resources.module';
 import { ServicesModule } from '../services/services.module';
 import { TenantsModule } from '../tenants/tenants.module';
-import { MailModule } from '../mail/mail.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -25,7 +24,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ResourcesModule,
     ServicesModule,
     TenantsModule,
-    MailModule,
     WhatsappModule,
     NotificationsModule,
   ],
