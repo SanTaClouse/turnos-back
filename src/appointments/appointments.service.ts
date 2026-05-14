@@ -12,6 +12,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Appointment } from './appointment.entity';
 import { AvailabilityService } from '../availability/availability.service';
 import { ClientsService } from '../clients/clients.service';
+import { normalizePhone } from '../clients/phone.util';
 import { ResourcesService } from '../resources/resources.service';
 import { ServicesService } from '../services/services.service';
 import { TenantsService } from '../tenants/tenants.service';
@@ -140,12 +141,16 @@ export class AppointmentsService {
       assignedResourceId = matchingSlot.resource_ids[0];
     }
 
-    // 5. Find or create client (con email opcional)
+    // 5. Find or create client (con email opcional).
+    // Pasamos el country_code del tenant para que la normalización del
+    // teléfono use el código correcto (por defecto +54).
+    const tenantForClient = await this.tenantsService.findById(dto.tenant_id);
     const client = await this.clientsService.findOrCreate(
       dto.tenant_id,
       dto.client_phone,
       dto.client_name || 'Unknown',
       dto.client_email?.trim().toLowerCase(),
+      tenantForClient?.country_code ?? '+54',
     );
 
     // 6. Calculate end_time and create appointment
@@ -223,8 +228,11 @@ export class AppointmentsService {
       .where('appointment.tenant_id = :tenantId', { tenantId });
 
     if (filters?.clientPhone) {
+      // Normalizamos el filtro para que matchee con el formato canónico
+      // guardado en la DB (ver phone.util.ts).
+      const normalized = normalizePhone(filters.clientPhone);
       qb.andWhere('client.phone = :clientPhone', {
-        clientPhone: filters.clientPhone,
+        clientPhone: normalized,
       });
     }
 

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Client } from './client.entity';
 import { Tenant } from '../tenants/tenant.entity';
+import { normalizePhone } from './phone.util';
 
 @Injectable()
 export class ClientsService {
@@ -17,20 +18,34 @@ export class ClientsService {
    * Find client by phone (platform-level) or create a new one.
    * Always ensures the client is linked to the given tenant.
    * If `email` is provided and the client doesn't have one yet, it's saved.
+   *
+   * El teléfono se normaliza a E.164 antes de buscar/guardar — así da igual
+   * que llegue "+54 9 11 ..." o "011 ...", siempre dedupea contra el mismo
+   * cliente. Ver phone.util.ts para las reglas.
    */
   async findOrCreate(
     tenantId: string,
     phone: string,
     name: string,
     email?: string,
+    countryCode = '+54',
   ) {
+    const normalized = normalizePhone(phone, countryCode);
+    if (!normalized) {
+      throw new Error('phone is required');
+    }
+
     let client = await this.repo.findOne({
-      where: { phone },
+      where: { phone: normalized },
       relations: ['tenants'],
     });
 
     if (!client) {
-      client = this.repo.create({ phone, name, email: email ?? undefined });
+      client = this.repo.create({
+        phone: normalized,
+        name,
+        email: email ?? undefined,
+      });
       client.tenants = [];
       client = await this.repo.save(client);
     } else if (email && !client.email) {
@@ -68,9 +83,11 @@ export class ClientsService {
     });
   }
 
-  async findByPhone(phone: string) {
+  async findByPhone(phone: string, countryCode = '+54') {
+    const normalized = normalizePhone(phone, countryCode);
+    if (!normalized) return null;
     return this.repo.findOne({
-      where: { phone },
+      where: { phone: normalized },
       relations: ['tenants'],
     });
   }
