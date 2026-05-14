@@ -70,6 +70,23 @@ export class AppointmentsController {
     });
   }
 
+  @Get('recent')
+  @ApiOperation({
+    summary: 'Últimos turnos creados (para feed de notificaciones)',
+    description:
+      'Devuelve los últimos turnos ordenados por created_at DESC, sin filtrar por fecha. ' +
+      'Pensado para el dropdown de notificaciones del admin: ver actividad reciente y confirmar pendientes.',
+  })
+  @ApiOkResponse({ description: 'Lista de turnos recientes' })
+  findRecent(
+    @Query('tenantId') tenantId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsed = limit ? parseInt(limit, 10) : 20;
+    const safe = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 100) : 20;
+    return this.service.findRecent(tenantId, safe);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un turno específico' })
   @ApiOkResponse({ description: 'Turno encontrado' })

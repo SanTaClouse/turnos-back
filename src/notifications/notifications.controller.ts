@@ -34,12 +34,27 @@ export class NotificationsController {
       throw new BadRequestException('tenant_id y subscription son requeridos');
     }
 
-    if (!dto.subscription.endpoint || !dto.subscription.keys) {
+    const { endpoint, keys } = dto.subscription;
+    if (!endpoint || typeof endpoint !== 'string') {
       throw new BadRequestException(
-        'subscription debe incluir endpoint y keys',
+        'subscription.endpoint es requerido y debe ser string',
+      );
+    }
+    // Validamos que p256dh/auth sean strings no vacíos.
+    // Si llegan {} o "", el frontend serializó ArrayBuffer mal — fallar acá
+    // evita guardar suscripciones rotas que después no entregan push.
+    if (
+      !keys ||
+      typeof keys.p256dh !== 'string' ||
+      typeof keys.auth !== 'string' ||
+      keys.p256dh.length === 0 ||
+      keys.auth.length === 0
+    ) {
+      throw new BadRequestException(
+        'subscription.keys.p256dh y .auth deben ser strings base64url no vacíos',
       );
     }
 
-    return this.service.subscribePush(dto.tenant_id, dto.subscription);
+    return this.service.subscribePush(dto.tenant_id, { endpoint, keys });
   }
 }

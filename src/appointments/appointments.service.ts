@@ -267,6 +267,25 @@ export class AppointmentsService {
       .getMany();
   }
 
+  /**
+   * Últimos turnos creados para el tenant, ordenados por created_at DESC.
+   * Usado por el dropdown de notificaciones del admin.
+   */
+  async findRecent(tenantId: string, limit: number) {
+    if (!tenantId) {
+      throw new BadRequestException('tenantId is required');
+    }
+    return this.appointmentsRepo
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.client', 'client')
+      .leftJoinAndSelect('appointment.service', 'service')
+      .leftJoinAndSelect('appointment.resource', 'resource')
+      .where('appointment.tenant_id = :tenantId', { tenantId })
+      .orderBy('appointment.created_at', 'DESC')
+      .limit(limit)
+      .getMany();
+  }
+
   async update(id: string, data: { notes?: string }) {
     const appointment = await this.findById(id);
     if (!appointment) {

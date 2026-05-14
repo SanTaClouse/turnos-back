@@ -13,10 +13,16 @@ import { Service } from '../services/service.entity';
 import { Resource } from '../resources/resource.entity';
 
 @Entity('appointment')
-// Safety net: prevents exact duplicate bookings for the same resource+date+time.
+// Safety net: prevents exact duplicate bookings for the same resource+date+time
+// — pero solo entre turnos activos. Un turno cancelado NO bloquea el slot,
+// para que se pueda re-reservar después de un cancel (intencional o por error).
+//
 // NOTE: This does NOT prevent overlapping multi-slot services (e.g. 60min at 10:00
 // vs 30min at 10:30). Overlap validation is handled in AppointmentsService.create().
-@Index(['resource_id', 'date', 'time'], { unique: true })
+@Index('idx_appointment_active_slot', ['resource_id', 'date', 'time'], {
+  unique: true,
+  where: `"status" <> 'cancelled'`,
+})
 export class Appointment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
