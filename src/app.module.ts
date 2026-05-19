@@ -12,6 +12,9 @@ import { ResourcesModule } from './resources/resources.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ExportsModule } from './exports/exports.module';
+import { EarningsModule } from './earnings/earnings.module';
+import { AiSummariesModule } from './ai-summaries/ai-summaries.module';
 
 @Module({
   imports: [
@@ -68,6 +71,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     MailModule,
     AuthModule,
     NotificationsModule,
+    ExportsModule,
+    EarningsModule,
+    AiSummariesModule,
   ],
 })
 export class AppModule {}
