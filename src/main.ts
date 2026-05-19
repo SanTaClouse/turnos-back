@@ -18,6 +18,10 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
+    // Cachea el preflight 24h: el browser reutiliza la decisión de CORS y
+    // deja de mandar OPTIONS antes de cada POST/PATCH/DELETE en la sesión.
+    // En Render esto ahorra ~250-680ms por endpoint por sesión.
+    maxAge: 86400,
   });
 
   // Swagger/OpenAPI Configuration
