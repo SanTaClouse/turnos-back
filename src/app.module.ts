@@ -43,17 +43,16 @@ import { AiSummariesModule } from './ai-summaries/ai-summaries.module';
           autoLoadEntities: true,
           synchronize: true, // Auto-sync entities to database (safer than manual migrations for now)
           ssl,
-          // Forzar schema 'public'. Algunos providers (Neon con Postgres 17/18)
-          // arrancan el rol sin search_path, lo que rompe CREATE TABLE con
-          // error 3F000 "no schema has been selected to create in".
+          // Forzar schema 'public' a nivel TypeORM: las queries de runtime
+          // quedan cualificadas como "public"."tabla" y no dependen del
+          // search_path del rol.
+          //
+          // IMPORTANTE: no pasar `extra.options: '-c search_path=...'` acá.
+          // El pooler de Neon (PgBouncer) RECHAZA ese parámetro en el startup
+          // packet con error "unsupported startup parameter". Si llegara a
+          // hacer falta search_path explícito, se setea por SQL una sola vez:
+          //   ALTER ROLE neondb_owner SET search_path TO public;
           schema: 'public',
-          // Pasa el search_path en el startup packet de Postgres (parámetro
-          // `options` del protocolo). Se aplica ANTES de cualquier query y
-          // sobrevive a poolers (PgBouncer en modo transaction), a diferencia
-          // de un `SET search_path` ejecutado después del handshake.
-          extra: {
-            options: '-c search_path=public',
-          },
         };
 
         // 1. DATABASE_URL (Render, Railway, Heroku, Supabase, etc.)
