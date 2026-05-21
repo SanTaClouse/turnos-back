@@ -67,4 +67,20 @@ export class CreateAppointmentDto {
     required: false,
   })
   resource_id?: string;
+
+  @ApiProperty({
+    example: 5000,
+    description:
+      'Precio cobrado para este turno (opcional). Si se omite, se usa el precio del servicio. Usar para descuentos o cobros distintos.',
+    required: false,
+  })
+  price_override?: number;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'Sobre-turno: saltea la validación de slots/availability. Sólo desde el admin (source="manual"). Default: false.',
+    required: false,
+  })
+  is_overbooking?: boolean;
 }

@@ -13,6 +13,7 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiBadRequestResponse,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
 import { BlockedSlotsService } from './blocked-slots.service';
 import { CreateBlockedSlotDto } from './dto/create-blocked-slot.dto';
@@ -26,6 +27,9 @@ export class BlockedSlotsController {
   @ApiOperation({ summary: 'Bloquear un horario' })
   @ApiCreatedResponse({ description: 'Horario bloqueado exitosamente' })
   @ApiBadRequestResponse({ description: 'Datos inválidos' })
+  @ApiConflictResponse({
+    description: 'Hay turnos activos que chocan con el bloqueo',
+  })
   create(@Body() dto: CreateBlockedSlotDto) {
     return this.service.create(dto);
   }

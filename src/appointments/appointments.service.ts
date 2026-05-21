@@ -80,6 +80,12 @@ export class AppointmentsService {
 
     const totalDuration = service.duration_minutes + service.buffer_minutes;
 
+    // Sobre-turnos: sólo desde el admin. El público nunca debe poder forzar
+    // un slot fuera de horario, así que descartamos el flag si la source no
+    // es manual.
+    const isOverbook =
+      dto.is_overbooking === true && (dto.source ?? 'web') === 'manual';
+
     // 2. Find resources that can do this service
     let candidateResourceIds: string[];
 
@@ -112,33 +118,47 @@ export class AppointmentsService {
       candidateResourceIds = resources.map((r) => r.id);
     }
 
-    // 3. Get available slots for the service across candidate resources
-    const availableSlots =
-      await this.availabilityService.getAvailableSlotsForService(
-        dto.tenant_id,
-        dto.date,
-        service.duration_minutes,
-        service.buffer_minutes,
-        candidateResourceIds,
-      );
-
-    // 4. Check if the requested time is available
-    const matchingSlot = availableSlots.find((s) => s.slot === dto.time);
-    if (!matchingSlot) {
-      throw new BadRequestException(
-        `Slot ${dto.time} not available. Available slots: ${availableSlots.map((s) => s.slot).join(', ') || 'none'}`,
-      );
-    }
-
-    // Pick the resource: preferred if specified and available, otherwise first available
     let assignedResourceId: string;
-    if (
-      dto.resource_id &&
-      matchingSlot.resource_ids.includes(dto.resource_id)
-    ) {
-      assignedResourceId = dto.resource_id;
+
+    if (isOverbook) {
+      // Sobre-turno: el admin lo metió a mano fuera de la disponibilidad.
+      // Saltamos getAvailableSlotsForService — el unique index (resource_id,
+      // date, time) sigue defendiéndonos de un duplicado exacto.
+      if (!dto.resource_id) {
+        // Si no eligió recurso, agarramos el primer candidato. No hay slot
+        // por el cual decidir, así que cualquiera vale.
+        assignedResourceId = candidateResourceIds[0];
+      } else {
+        assignedResourceId = dto.resource_id;
+      }
     } else {
-      assignedResourceId = matchingSlot.resource_ids[0];
+      // 3. Get available slots for the service across candidate resources
+      const availableSlots =
+        await this.availabilityService.getAvailableSlotsForService(
+          dto.tenant_id,
+          dto.date,
+          service.duration_minutes,
+          service.buffer_minutes,
+          candidateResourceIds,
+        );
+
+      // 4. Check if the requested time is available
+      const matchingSlot = availableSlots.find((s) => s.slot === dto.time);
+      if (!matchingSlot) {
+        throw new BadRequestException(
+          `Slot ${dto.time} not available. Available slots: ${availableSlots.map((s) => s.slot).join(', ') || 'none'}`,
+        );
+      }
+
+      // Pick the resource: preferred if specified and available, otherwise first available
+      if (
+        dto.resource_id &&
+        matchingSlot.resource_ids.includes(dto.resource_id)
+      ) {
+        assignedResourceId = dto.resource_id;
+      } else {
+        assignedResourceId = matchingSlot.resource_ids[0];
+      }
     }
 
     // 5. Find or create client (con email opcional).
@@ -170,6 +190,11 @@ export class AppointmentsService {
         notes: dto.notes ?? undefined,
         source: dto.source ?? 'web',
         status: 'pending',
+        price_override:
+          dto.price_override === undefined || dto.price_override === null
+            ? null
+            : String(dto.price_override),
+        is_overbooking: isOverbook,
       });
 
       saved = await this.appointmentsRepo.save(appointment);
@@ -294,7 +319,10 @@ export class AppointmentsService {
       .getMany();
   }
 
-  async update(id: string, data: { notes?: string }) {
+  async update(
+    id: string,
+    data: { notes?: string; price_override?: number | null },
+  ) {
     const appointment = await this.findById(id);
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
@@ -302,6 +330,12 @@ export class AppointmentsService {
 
     if (data.notes !== undefined) {
       appointment.notes = data.notes;
+    }
+
+    if (data.price_override !== undefined) {
+      // null o número. null = volver a usar service.price.
+      appointment.price_override =
+        data.price_override === null ? null : String(data.price_override);
     }
 
     return this.appointmentsRepo.save(appointment);

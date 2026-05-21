@@ -47,6 +47,18 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   notes: string; // free-text notes from client or business
 
+  // Precio efectivamente cobrado para este turno. Si está, sobreescribe el
+  // service.price para el cálculo de ganancias (descuentos, cobros distintos,
+  // etc.). Si es null, se usa service.price como siempre.
+  @Column({ type: 'numeric', nullable: true })
+  price_override: string | null;
+
+  // Sobre-turno: turno creado fuera del slot grid normal (squeeze in).
+  // Saltea la validación de availability/slot al crear. Sólo accesible desde
+  // el admin manual; no se usa nunca desde el flujo público.
+  @Column({ type: 'boolean', default: false })
+  is_overbooking: boolean;
+
   @Column({ type: 'varchar', nullable: true })
   verification_token: string; // JWT token for email verification link
 

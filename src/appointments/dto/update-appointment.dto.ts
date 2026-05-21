@@ -7,4 +7,13 @@ export class UpdateAppointmentDto {
     required: false,
   })
   notes?: string;
+
+  @ApiProperty({
+    example: 4500,
+    description:
+      'Precio efectivamente cobrado. null/omitido para volver al precio del servicio.',
+    required: false,
+    nullable: true,
+  })
+  price_override?: number | null;
 }

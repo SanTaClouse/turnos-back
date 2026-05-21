@@ -58,6 +58,14 @@ export class EarningsService {
   ) {}
 
   private revenue(a: Appointment): number {
+    // Si el turno tiene un precio override (descuento, recargo, etc.), gana
+    // sobre el service.price. Útil para "a este cliente le cobré $X distinto".
+    const override = a.price_override;
+    if (override !== null && override !== undefined) {
+      const parsed =
+        typeof override === 'string' ? parseFloat(override) : Number(override);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
     const p = a.service?.price;
     if (p === null || p === undefined) return 0;
     return typeof p === 'string' ? parseFloat(p) : Number(p);
