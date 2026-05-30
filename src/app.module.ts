@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { AvailabilityModule } from './availability/availability.module';
@@ -15,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ExportsModule } from './exports/exports.module';
 import { EarningsModule } from './earnings/earnings.module';
 import { AiSummariesModule } from './ai-summaries/ai-summaries.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { AiSummariesModule } from './ai-summaries/ai-summaries.module';
       envFilePath: '.env',
     }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -84,6 +87,7 @@ import { AiSummariesModule } from './ai-summaries/ai-summaries.module';
     ExportsModule,
     EarningsModule,
     AiSummariesModule,
+    BillingModule,
   ],
 })
 export class AppModule {}

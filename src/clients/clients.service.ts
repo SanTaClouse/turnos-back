@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Client } from './client.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { normalizePhone } from './phone.util';
+import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class ClientsService {
@@ -12,6 +13,7 @@ export class ClientsService {
     private repo: Repository<Client>,
     @InjectRepository(Tenant)
     private tenantsRepo: Repository<Tenant>,
+    private billing: BillingService,
   ) {}
 
   /**
@@ -57,6 +59,11 @@ export class ClientsService {
     // Ensure client is linked to this tenant
     const isLinked = client.tenants?.some((t) => t.id === tenantId);
     if (!isLinked) {
+      // Gate de plan: vincular este cliente nuevo cuenta para el cupo. Si el
+      // tenant ya superó su límite gratis y no está suscripto/exento, esto
+      // lanza 403 PLAN_LIMIT_REACHED. Clientes ya vinculados siguen pasando.
+      await this.billing.assertCanAddClient(tenantId);
+
       const tenant = await this.tenantsRepo.findOne({
         where: { id: tenantId },
       });
