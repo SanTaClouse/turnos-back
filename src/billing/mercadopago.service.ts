@@ -68,8 +68,13 @@ export class MercadoPagoService {
     const json = text ? (JSON.parse(text) as unknown) : null;
 
     if (!res.ok) {
+      // Logueamos también el cuerpo que enviamos (sin el token) para poder
+      // depurar errores de MP que vienen genéricos (ej: 500 sin detalle).
       this.logger.error(
-        `MP ${rest.method ?? 'GET'} ${path} → ${res.status}: ${text}`,
+        `MP ${rest.method ?? 'GET'} ${path} → ${res.status}: ${text}\n` +
+          `→ request body: ${
+            body !== undefined ? JSON.stringify(body) : '(sin body)'
+          }`,
       );
       throw new InternalServerErrorException(
         'Error comunicándose con Mercado Pago',
