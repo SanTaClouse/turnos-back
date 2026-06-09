@@ -18,6 +18,10 @@ export interface NotificationPayload {
   title: string;
   body: string;
   channels: ('push' | 'email' | 'whatsapp' | 'sms')[];
+  // Datos extra que viajan en el `data` de la push y que el service worker
+  // usa para los botones de acción (confirmar, abrir WhatsApp). Solo aplica
+  // al canal push; el resto de canales lo ignoran.
+  pushData?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -133,16 +137,25 @@ export class NotificationsService {
       return;
     }
 
+    // URL pública del backend para que el service worker pueda llamar a
+    // /appointments/:id/confirm directo desde la notificación (el endpoint es
+    // público, no necesita sesión).
+    const apiBase =
+      this.configService.get<string>('API_PUBLIC_URL') ??
+      'http://localhost:3000';
+
     const pushPayload = JSON.stringify({
       title: payload.title,
       body: payload.body,
       icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      badge: '/badge.png',
       tag: payload.appointmentId || payload.type,
       data: {
         appointmentId: payload.appointmentId,
         tenantId: payload.tenantId,
         type: payload.type,
+        apiBase,
+        ...(payload.pushData ?? {}),
       },
     });
 
